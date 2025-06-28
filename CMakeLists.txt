@@ -94,6 +94,7 @@ endif()
 # --------------------------------------------------
 option(SOUFFLE_DOMAIN_64BIT "Enable/Disable 64-bit number values in Datalog tuples" OFF)
 option(SOUFFLE_USE_CURSES "Enable/Disable ncurses-based provenance display" ON)
+option(SOUFFLE_USE_WEB "Enable/Disable web-based provenance display" ON)
 option(SOUFFLE_SWIG "Enable/Disable all SWIG builds" OFF)
 option(SOUFFLE_SWIG_PYTHON "Enable/Disable Python SWIG" OFF)
 option(SOUFFLE_SWIG_JAVA "Enable/Disable Java SWIG" OFF)
@@ -166,6 +167,7 @@ if(EMSCRIPTEN)
   set(SOUFFLE_USE_ZLIB off)
   set(SOUFFLE_USE_LIBFFI off)
   set(SOUFFLE_USE_CURSES off)
+  set(SOUFFLE_USE_WEB off)
   set(SOUFFLE_ENABLE_TESTING off)
 endif ()
 # --------------------------------------------------
@@ -180,6 +182,13 @@ if (SOUFFLE_USE_CURSES)
             INTERFACE_INCLUDE_DIRECTORIES "${CURSES_INCLUDE_DIR}"
         )
     endif()
+endif()
+
+# --------------------------------------------------
+# HTML+JS Provenance viewer
+# --------------------------------------------------
+if (SOUFFLE_USE_WEB)
+    add_compile_definitions(USE_WEB)
 endif()
 
 # --------------------------------------------------

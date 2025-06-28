@@ -126,6 +126,10 @@
 #include <utility>
 #include <vector>
 
+#ifndef _MSC_VER
+#include <signal.h>
+#endif
+
 namespace fs = std::filesystem;
 
 namespace souffle {
@@ -577,14 +581,17 @@ bool interpretTranslationUnit(Global& glb, ram::TranslationUnit& ramTranslationU
         }
         if (glb.config().has("provenance")) {
 #ifdef _MSC_VER
-            throw("No explain/explore provenance on Windows\n.");
+            throw("No explain/explore/ui provenance on Windows\n.");
 #else
             // only run explain interface if interpreted
             interpreter::ProgInterface interface(*interpreter);
-            if (glb.config().get("provenance") == "explain") {
+            std::string provenanceMode = glb.config().get("provenance");
+            if (provenanceMode == "explain") {
                 explain(interface, false);
-            } else if (glb.config().get("provenance") == "explore") {
+            } else if (provenanceMode == "explore") {
                 explain(interface, true);
+            } else if (provenanceMode.substr(0, 3) == "web") {
+                explain(interface, provenanceMode);
             }
 #endif
         }
@@ -717,7 +724,7 @@ std::vector<MainOption> getMainOptions() {
           "Enable profiling, and write profile data to <FILE>."},
       {"profile-frequency", nextOptChar++, "", "", false,
           "Enable the frequency counter in the profiler."},
-      {"provenance", 't', "[ none | explain | explore ]", "", false,
+      {"provenance", 't', "[ none | explain | explore | web[:host[:port]] ]", "", false,
           "Enable provenance instrumentation and interaction."},
       {"show", nextOptChar++, "[ <see-list> ]", "", true,
           "Print selected program information.\n"
@@ -755,6 +762,15 @@ int main(Global& glb, const char* souffle_executable) {
     auto souffle_start = std::chrono::high_resolution_clock::now();
 
     try {
+        // Explicit signal handlers seem to be needed for Ctrl+C to work when
+        // Souffle is running as PID 1 of a Docker container.
+#ifndef _MSC_VER
+        auto signal_handler = +[](int) { exit(2); };
+        signal(SIGHUP, signal_handler);
+        signal(SIGINT, signal_handler);
+        signal(SIGTERM, signal_handler);
+#endif
+
         // Take in pragma options from the command line
         if (glb.config().has("pragma")) {
             ast::transform::PragmaChecker::Merger merger(glb);
