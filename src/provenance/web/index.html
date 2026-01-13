@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Souffle Provenance Explorer</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <div class="input-group">
+                <label for="query-input">Query:</label>
+                <input type="text" id="query-input" placeholder="relation(&quot;arg1&quot;, &quot;arg2&quot;, ...)" />
+                <button onclick="explainQuery()">Explain</button>
+            </div>
+        </div>
+        
+        <div class="results">
+            <div id="error-display" class="error hidden"></div>
+            <div id="tree-display" class="tree-display"></div>
+        </div>
+    </div>
+    
+    <script src="/script.js"></script>
+</body>
+</html>

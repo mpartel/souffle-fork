@@ -19,7 +19,8 @@
 #include "souffle/provenance/ExplainProvenance.h"
 #include "souffle/provenance/ExplainProvenanceImpl.h"
 #include "souffle/provenance/ExplainTree.h"
-#include <algorithm>
+#include "souffle/provenance/ExplainWeb.h"
+#include "souffle/utility/StringUtil.h"
 #include <csignal>
 #include <cstdio>
 #include <fstream>
@@ -279,27 +280,11 @@ public:
     /* The main explain call */
     virtual void explain() = 0;
 
-private:
-    /* Get input */
-    virtual std::string getInput() = 0;
-
-    /* Print a command prompt, disabled for non-terminal outputs */
-    virtual void printPrompt(const std::string& prompt) = 0;
-
-    /* Print a tree */
-    virtual void printTree(Own<TreeNode> tree) = 0;
-
-    /* Print any other information, disabled for non-terminal outputs */
-    virtual void printInfo(const std::string& info) = 0;
-
-    /* Print an error, such as a wrong command */
-    virtual void printError(const std::string& error) = 0;
-
     /**
      * Parse tuple, split into relation name and values
      * @param str The string to parse, should be something like "R(x1, x2, x3, ...)"
      */
-    std::pair<std::string, std::vector<std::string>> parseTuple(const std::string& str) {
+    static std::pair<std::string, std::vector<std::string>> parseTuple(const std::string& str) {
         std::string relName;
         std::vector<std::string> args;
 
@@ -343,7 +328,7 @@ private:
      * relation tuple
      * @param str The string to parse, should be in form "R(x1, x2, x3, ...)"
      */
-    std::pair<std::string, std::vector<std::string>> parseQueryTuple(const std::string& str) {
+    static std::pair<std::string, std::vector<std::string>> parseQueryTuple(const std::string& str) {
         std::string relName;
         std::vector<std::string> args;
         // regex for matching tuples
@@ -379,6 +364,22 @@ private:
 
         return std::make_pair(relName, args);
     }
+
+private:
+    /* Get input */
+    virtual std::string getInput() = 0;
+
+    /* Print a command prompt, disabled for non-terminal outputs */
+    virtual void printPrompt(const std::string& prompt) = 0;
+
+    /* Print a tree */
+    virtual void printTree(Own<TreeNode> tree) = 0;
+
+    /* Print any other information, disabled for non-terminal outputs */
+    virtual void printInfo(const std::string& info) = 0;
+
+    /* Print an error, such as a wrong command */
+    virtual void printError(const std::string& error) = 0;
 };
 
 class ExplainConsole : public Explain {
@@ -641,6 +642,49 @@ inline void explain(SouffleProgram& prog, bool ncurses) {
     } else {
         ExplainConsole exp(prov);
         exp.explain();
+    }
+}
+
+inline void explain(SouffleProgram& prog, const std::string& mode) {
+    ExplainProvenanceImpl prov(prog);
+
+    if (mode == "explain") {
+        ExplainConsole exp(prov);
+        exp.explain();
+    } else if (mode == "explore") {
+#ifdef USE_NCURSES
+        ExplainNcurses exp(prov);
+        exp.explain();
+#else
+        std::cout << "The ncurses-based interface is not enabled\n";
+#endif
+    } else if (mode.substr(0, 3) == "web") {
+#ifdef USE_WEB
+        auto parts = splitString(mode, ':');
+        std::string host = "127.0.0.1";
+        int port = 8080;
+
+        if (parts.size() >= 2 && !parts[1].empty()) {
+            host = parts[1];
+        }
+        if (parts.size() >= 3 && !parts[2].empty()) {
+            try {
+                port = std::stoi(parts[2]);
+                if (port <= 0 || port > 65535) {
+                    throw std::invalid_argument("Invalid port number: " + parts[2]);
+                }
+            } catch (const std::exception&) {
+                throw std::invalid_argument("Invalid port format: " + parts[2]);
+            }
+        }
+
+        ExplainWeb exp(prov, std::move(host), port);
+        exp.explain();
+#else
+        std::cout << "The web-based interface is not enabled\n";
+#endif
+    } else {
+        std::cout << "Unknown provenance mode: " << mode << std::endl;
     }
 }
 

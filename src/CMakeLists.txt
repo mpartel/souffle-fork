@@ -141,6 +141,7 @@ set(SOUFFLE_SOURCES
     interpreter/BTreeDeleteIndex.cpp
     interpreter/EqrelIndex.cpp
     interpreter/ProvenanceIndex.cpp
+    provenance/ExplainWeb.cpp
     parser/ParserDriver.cpp
     parser/ParserUtils.cpp
     parser/SrcLocation.cpp
@@ -203,13 +204,42 @@ else ()
 endif ()
 
 # --------------------------------------------------
+# Web Assets Generation
+# --------------------------------------------------
+set(WEB_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/provenance/web")
+set(WEB_ASSETS_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/provenance/ExplainWebAssets.cpp")
+
+# Create output directory
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/provenance")
+
+# Generate web assets
+add_custom_command(
+    OUTPUT "${WEB_ASSETS_OUTPUT}"
+    COMMAND ${CMAKE_COMMAND}
+        -DWEB_DIR="${WEB_ASSETS_DIR}"
+        -DOUTPUT_FILE="${WEB_ASSETS_OUTPUT}"
+        -P "${WEB_ASSETS_DIR}/generate_assets.cmake"
+    DEPENDS "${WEB_ASSETS_DIR}/index.html"
+            "${WEB_ASSETS_DIR}/style.css"
+            "${WEB_ASSETS_DIR}/script.js"
+            "${WEB_ASSETS_DIR}/generate_assets.cmake"
+    COMMENT "Generating embedded web assets"
+)
+
+add_custom_target(web_assets DEPENDS "${WEB_ASSETS_OUTPUT}")
+
+# --------------------------------------------------
 # Souffle library
 # --------------------------------------------------
 add_library(libsouffle STATIC
             ${SOUFFLE_SOURCES}
             ${FLEX_scanner_OUTPUTS}
             ${BISON_parser_OUTPUTS}
+            "${WEB_ASSETS_OUTPUT}"
             )
+
+# Ensure web assets are generated before building the library
+add_dependencies(libsouffle web_assets)
 
 # Make most of the attributes public.  Note that that's strictly not "correct" but
 # this library is not going to be installed and it makes it easier to build

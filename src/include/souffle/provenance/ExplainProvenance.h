@@ -28,6 +28,7 @@
 #include <map>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -245,7 +246,9 @@ protected:
             case 'u': return ramBitCast(RamUnsignedFromString(value));
             case 'f': return ramBitCast(RamFloatFromString(value));
             case 's':
-                assert(2 <= value.size() && value[0] == '"' && value.back() == '"');
+                if (!(2 <= value.size() && value[0] == '"' && value.back() == '"')) {
+                    throw std::invalid_argument("invalid string value: " + value);
+                }
                 return symTable.encode(value.substr(1, value.size() - 2));
             case 'r': fatal("not implemented");
             default: fatal("unhandled type attr code");
